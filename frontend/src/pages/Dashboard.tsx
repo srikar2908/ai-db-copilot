@@ -13,7 +13,14 @@ import type { HistoryItem } from '../types/history'
 import type { ExecutionResult, ExecutionRow, ValidationResult } from '../types/query'
 import { getStoredUser } from '../utils/auth'
 import { getActiveConnectionRef, setActiveConnectionRef } from '../utils/connections'
-import { canUseAdminActions, canUseQueryActions, getRoleLabel } from '../utils/roles'
+
+import {
+  canApproveQueries,
+  canEditSql,
+  canGenerateQueries,
+  canUseAdminActions,
+  getRoleLabel,
+} from '../utils/roles'
 
 import SchemaExplorer from '../components/schema/SchemaExplorer'
 import type { SchemaResponse } from '../types/schema'
@@ -24,12 +31,14 @@ function generateThreadId() {
 }
 
 function isWriteSql(sql: string) {
-  return /\b(update|delete|insert|drop|alter|truncate)\b/i.test(sql)
+  return /\b(insert|update|delete|drop|alter|truncate|create|merge|replace)\b/i.test(sql)
 }
 
 function Dashboard() {
   const user = useMemo(() => getStoredUser(), [])
-  const canExecuteQueries = canUseQueryActions(user)
+  const canGenerate = canGenerateQueries(user)
+  const canEdit = canEditSql(user)
+  const canApprove = canApproveQueries(user)
   const isAdmin = canUseAdminActions(user)
 
   const [prompt, setPrompt] = useState('show employee names')
@@ -346,11 +355,12 @@ function Dashboard() {
             </div>
           </div>
 
-          {!canExecuteQueries ? (
-            <div className="mb-4 rounded-md border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
-              Analyst access is read-only. Query generation, SQL editing, and approval actions are hidden for this role.
-            </div>
-          ) : null}
+          {user?.role === 'analyst' ? (
+              <div className="mb-4 rounded-md border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+                Analyst access supports safe SELECT query generation and execution.
+                SQL editing and approval actions are restricted.
+              </div>
+            ) : null}
 
             {isLoadingSchema ? (
               <div className="mt-4 rounded-md border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-400">
@@ -371,14 +381,14 @@ function Dashboard() {
           <form className="space-y-4" onSubmit={handleGenerateSql}>
             <textarea
               className="min-h-36 w-full resize-y rounded-md border border-slate-700 bg-slate-950 px-4 py-3 text-sm leading-6 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-              disabled={!canExecuteQueries || isGenerating || isApproving || isRejecting}
+              disabled={!canGenerate || isGenerating || isApproving || isRejecting}
               onChange={(event) => setPrompt(event.target.value)}
               placeholder="Ask AI about your database..."
               required
               value={prompt}
             />
 
-            {canExecuteQueries ? (
+            {canGenerate  ? (
               <div className="flex justify-end">
                 <Button disabled={!prompt.trim()} isLoading={isGenerating} type="submit">
                   Generate SQL
@@ -400,7 +410,7 @@ function Dashboard() {
               {approvalRequired ? <Badge tone="warning">Approval required</Badge> : null}
               {riskLevel ? <Badge tone={riskLevel === 'high' || riskLevel === 'blocked' ? 'danger' : riskLevel === 'medium' ? 'warning' : 'info'}>{riskLevel} risk</Badge> : null}
 
-              {generatedSql && !isEditingSql && canExecuteQueries ? (
+              {generatedSql && !isEditingSql ? (
                 <>
                   <Button className="px-3 py-1.5 text-xs" onClick={handleCopySql} type="button" variant="secondary">
                     Copy SQL
@@ -416,9 +426,30 @@ function Dashboard() {
                   <Button
                     className="px-3 py-1.5 text-xs"
                     onClick={() => {
+
+                      // -----------------------------------
+                      // ANALYST WRITE SQL PROTECTION
+                      // -----------------------------------
+
+                      if (
+                        user?.role === 'analyst' &&
+                        isWriteSql(editableSql)
+                      ) {
+
+                        setError(
+                          'Analyst role can only save SELECT queries.'
+                        )
+
+                        return
+                      }
+
                       setGeneratedSql(editableSql)
+
                       setIsEditingSql(false)
-                      setToast('SQL changes saved locally for approval.')
+
+                      setToast(
+                        'SQL changes saved locally for approval.'
+                      )
                     }}
                     type="button"
                     variant="success"
@@ -489,10 +520,14 @@ function Dashboard() {
             </p>
           </div>
 
-          {canExecuteQueries ? (
+          {(canApprove || user?.role === 'analyst') ? (
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button
-                disabled={!generatedSql || !approvalRequired || isEditingSql || isRejecting}
+                disabled={!generatedSql || !approvalRequired || isEditingSql || isRejecting || (
+                      user?.role === 'analyst' &&
+                      isWriteSql(editableSql)
+                    )
+        }
                 isLoading={isApproving}
                 onClick={() => void handleApproval('approved')}
                 type="button"
@@ -513,7 +548,7 @@ function Dashboard() {
             </div>
           ) : (
             <div className="rounded-md border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-400">
-              Approval controls are hidden for analyst users.
+              This workflow requires elevated privileges.
             </div>
           )}
         </Card>
@@ -542,7 +577,11 @@ function Dashboard() {
               </pre>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button
-                  disabled={isEditingSql || isRejecting}
+                  disabled={isEditingSql || isRejecting  ||
+    (
+      user?.role === 'analyst' &&
+      isWriteSql(editableSql)
+    )}
                   isLoading={isApproving}
                   onClick={() => void handleApproval('approved')}
                   type="button"
@@ -550,9 +589,15 @@ function Dashboard() {
                 >
                   Retry Query
                 </Button>
-                <Button onClick={() => setIsEditingSql(true)} type="button" variant="secondary">
-                  Edit SQL
-                </Button>
+                {generatedSql  ? (
+                      <Button
+                        onClick={() => setIsEditingSql(true)}
+                        type="button"
+                        variant="secondary"
+                      >
+                        Edit SQL
+                      </Button>
+                    ) : null}
               </div>
             </div>
           ) : null}
