@@ -16,7 +16,6 @@ import { getActiveConnectionRef, setActiveConnectionRef } from '../utils/connect
 
 import {
   canApproveQueries,
-  canEditSql,
   canGenerateQueries,
   canUseAdminActions,
   getRoleLabel,
@@ -37,7 +36,6 @@ function isWriteSql(sql: string) {
 function Dashboard() {
   const user = useMemo(() => getStoredUser(), [])
   const canGenerate = canGenerateQueries(user)
-  const canEdit = canEditSql(user)
   const canApprove = canApproveQueries(user)
   const isAdmin = canUseAdminActions(user)
 
