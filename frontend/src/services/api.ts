@@ -9,6 +9,7 @@ import { getAuthToken, logout } from '../utils/auth'
 
 import type { SchemaResponse } from '../types/schema'
 
+console.log(import.meta.env.VITE_API_BASE_URL)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 
