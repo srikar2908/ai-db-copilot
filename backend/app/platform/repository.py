@@ -100,6 +100,7 @@ async def save_workflow_run(
                 else "failed"
             )
 
+
         # -----------------------------------------
         # COMMON DATA
         # -----------------------------------------
@@ -107,6 +108,28 @@ async def save_workflow_run(
         approval = state.get(
             "approval"
         )
+
+        # -------------------------------------------------
+        # APPROVAL STATUS
+        # -------------------------------------------------
+
+        approval_value = safe_get(
+            approval,
+            "approved",
+            None
+        )
+
+        if approval_value is True:
+
+            approval_status = "approved"
+
+        elif approval_value is False:
+
+            approval_status = "rejected"
+
+        else:
+
+            approval_status = "pending"
 
         common_fields = {
 
@@ -126,10 +149,7 @@ async def save_workflow_run(
                 ),
 
             "approval_status":
-                safe_get(
-                    approval,
-                    "approved"
-                ),
+                approval_status,
 
             "risk_level":
                 state.get(

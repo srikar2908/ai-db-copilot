@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str
     GROQ_MODEL: str
 
+    DATABASE_URL: str
+
     ENCRYPTION_KEY: str
     
     JWT_SECRET_KEY: str
