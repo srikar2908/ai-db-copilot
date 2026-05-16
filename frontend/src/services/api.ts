@@ -9,9 +9,9 @@ import { getAuthToken, logout } from '../utils/auth'
 
 import type { SchemaResponse } from '../types/schema'
 
-console.log(import.meta.env.VITE_API_BASE_URL)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+const API_BASE_URL = 'https://ai-db-copilot.onrender.com'
 
+console.log('API URL:', API_BASE_URL)
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
