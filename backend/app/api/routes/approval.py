@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from app.models.api import (
 
@@ -33,6 +33,9 @@ from app.core.sql.reviewer import (
 
 from app.core.sql.validator import (
     validate_sql_query
+)
+from app.security.dependencies import (
+    get_current_user
 )
 
 router = APIRouter()
@@ -107,7 +110,11 @@ async def load_workflow_state(
 @router.post("/approve")
 async def approve_sql(
 
-    request: ApproveRequest
+    request: ApproveRequest,
+
+    current_user=Depends(
+        get_current_user
+    )
 ):
 
     workflow_state, config = (
@@ -127,14 +134,12 @@ async def approve_sql(
     # VALIDATE STATUS
     # -----------------------------------------
 
-    if (
+    allowed_review_statuses = [
+        WorkflowStatus.WAITING_FOR_SQL_REVIEW,
+        WorkflowStatus.FAILED
+    ]
 
-        workflow_state.workflow_status
-
-        !=
-
-        WorkflowStatus.WAITING_FOR_SQL_REVIEW
-    ):
+    if workflow_state.workflow_status not in allowed_review_statuses:
 
         return {
 
@@ -144,8 +149,51 @@ async def approve_sql(
                 "for SQL review"
         }
 
+    if request.approval_status != "approved":
+
+        workflow_state.approval.required = False
+
+        workflow_state.approval.approved = False
+
+        workflow_state.approval.reason = (
+            "Rejected by user"
+        )
+
+        workflow_state.workflow_status = (
+            WorkflowStatus.REJECTED
+        )
+
+        workflow_state.updated_at = (
+            datetime.utcnow()
+        )
+
+        workflow_state.node_trace.append(
+            "sql_rejected"
+        )
+
+        return {
+
+            "thread_id":
+                request.thread_id,
+
+            "approval_status":
+                "rejected"
+        }
+
+    if request.approved_sql:
+
+        edited_request = EditAndApproveRequest(
+            thread_id=request.thread_id,
+            edited_sql=request.approved_sql
+        )
+
+        return await edit_and_approve(
+            edited_request,
+            current_user
+        )
+
     # -----------------------------------------
-    # APPROVE
+    # APPROVE EXISTING SQL
     # -----------------------------------------
 
     workflow_state.approval.required = False
@@ -199,7 +247,11 @@ async def approve_sql(
 @router.post("/edit-and-approve")
 async def edit_and_approve(
 
-    request: EditAndApproveRequest
+    request: EditAndApproveRequest,
+
+    current_user=Depends(
+        get_current_user
+    )
 ):
 
     workflow_state, config = (
@@ -224,14 +276,12 @@ async def edit_and_approve(
     # VALIDATE STATUS
     # -----------------------------------------
 
-    if (
+    allowed_review_statuses = [
+        WorkflowStatus.WAITING_FOR_SQL_REVIEW,
+        WorkflowStatus.FAILED
+    ]
 
-        workflow_state.workflow_status
-
-        !=
-
-        WorkflowStatus.WAITING_FOR_SQL_REVIEW
-    ):
+    if workflow_state.workflow_status not in allowed_review_statuses:
 
         return {
 
@@ -323,6 +373,10 @@ async def edit_and_approve(
     workflow_state.approved_sql = (
         normalized_sql
     )
+
+    workflow_state.errors = []
+
+    workflow_state.execution_result = None
 
     # -----------------------------------------
     # STORE REVIEW

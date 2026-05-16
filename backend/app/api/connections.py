@@ -52,23 +52,27 @@ async def add_connection(
         # BUILD DATABASE URL
         # -------------------------------------------------
 
-        database_url = build_database_url(
+        database_url = (
+            request.database_url
+            or
+            build_database_url(
 
-            database_type=request.database_type,
+                database_type=request.database_type,
 
-            host=request.host,
+                host=request.host,
 
-            port=request.port,
+                port=request.port,
 
-            username=request.username,
+                username=request.username,
 
-            password=request.password,
+                password=request.password,
 
-            database_name=request.database_name,
+                database_name=request.database_name,
 
-            file_path=request.file_path,
+                file_path=request.file_path,
 
-            ssl_enabled=request.ssl_enabled
+                ssl_enabled=request.ssl_enabled
+            )
         )
 
         # -------------------------------------------------

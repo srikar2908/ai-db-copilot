@@ -81,7 +81,7 @@ async def save_workflow_run(
             "execution_result"
         )
 
-        execution_status = None
+        execution_status = "pending"
 
         if execution_result:
 
@@ -119,11 +119,17 @@ async def save_workflow_run(
             None
         )
 
+        approval_required = safe_get(
+            approval,
+            "required",
+            False
+        )
+
         if approval_value is True:
 
             approval_status = "approved"
 
-        elif approval_value is False:
+        elif approval_value is False and not approval_required:
 
             approval_status = "rejected"
 
@@ -315,11 +321,24 @@ async def get_all_workflows():
                 "execution_status":
                     workflow.execution_status,
 
+                "execution_result":
+                    workflow.execution_result,
+
+                "validation_result":
+                    workflow.validation_result,
+
+                "errors":
+                    workflow.errors,
+
                 "created_at":
-                    workflow.created_at,
+                    workflow.created_at.isoformat()
+                    if workflow.created_at
+                    else None,
 
                 "updated_at":
-                    workflow.updated_at
+                    workflow.updated_at.isoformat()
+                    if workflow.updated_at
+                    else None
             }
 
             for workflow in workflows
@@ -382,9 +401,22 @@ async def get_workflow_by_thread(
             "execution_status":
                 workflow.execution_status,
 
+            "execution_result":
+                workflow.execution_result,
+
+            "validation_result":
+                workflow.validation_result,
+
+            "errors":
+                workflow.errors,
+
             "created_at":
-                workflow.created_at,
+                workflow.created_at.isoformat()
+                if workflow.created_at
+                else None,
 
             "updated_at":
-                workflow.updated_at
+                workflow.updated_at.isoformat()
+                if workflow.updated_at
+                else None
         }

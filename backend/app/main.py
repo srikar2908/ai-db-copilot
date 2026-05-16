@@ -5,6 +5,8 @@ from fastapi import (
     Depends
 )
 
+from fastapi.middleware.cors import CORSMiddleware
+
 from app.config import settings
 
 from app.db.registry import (
@@ -57,6 +59,17 @@ app = FastAPI(
     title=settings.APP_NAME
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:5173",
+        "http://localhost:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(
     history_router
 )
@@ -91,6 +104,50 @@ async def root():
         "message":
             "AI Database Copilot Running"
     }
+
+
+# -------------------------------------------------
+# GET DATABASE SCHEMA
+# -------------------------------------------------
+
+@app.get("/schema")
+async def schema_endpoint(
+
+    connection_ref: str,
+
+    current_user=Depends(
+        get_current_user
+    )
+):
+
+    # -------------------------------------------------
+    # RESOLVE DATABASE URL
+    # -------------------------------------------------
+
+    database_url = await get_database_url(
+
+        tenant_id=current_user["tenant_id"],
+
+        user_id=current_user["user_id"],
+
+        connection_ref=connection_ref
+    )
+
+    # -------------------------------------------------
+    # EXTRACT SCHEMA
+    # -------------------------------------------------
+
+    schema = await extract_schema_context(
+        database_url
+    )
+
+    return {
+        "tables": schema.tables,
+        "relevant_tables": schema.relevant_tables,
+        "schema_version": schema.schema_version,
+        "extracted_at": schema.extracted_at
+    }
+
 
 
 # -------------------------------------------------

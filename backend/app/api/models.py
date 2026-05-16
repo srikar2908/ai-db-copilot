@@ -18,12 +18,16 @@ class ApprovalRequest(
 
     approval_status: str
 
+    approved_sql: str | None = None
+
 
 class ConnectionRequest(BaseModel):
 
     connection_ref: str
 
     database_type: str
+
+    database_url: str | None = None
 
     host: str | None = None
 

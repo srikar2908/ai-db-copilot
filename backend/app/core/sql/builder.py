@@ -276,7 +276,8 @@ def build_having_clause(
 # =================================================
 
 def build_join_clause(
-    joins: list[dict]
+    joins: list[dict],
+    base_table: str | None = None
 ) -> str:
 
     if not joins:
@@ -294,6 +295,14 @@ def build_join_clause(
         return f"{table}.{column}"
 
     clauses = []
+
+    joined_tables = set()
+
+    if base_table:
+
+        joined_tables.add(
+            base_table
+        )
 
     for join in joins:
 
@@ -330,13 +339,27 @@ def build_join_clause(
             "right_column"
         )
 
+        table_to_join = right_table
+
+        if right_table in joined_tables and left_table not in joined_tables:
+
+            table_to_join = left_table
+
+        if not table_to_join or table_to_join in joined_tables:
+
+            continue
+
         clauses.append(
             f"{join_type} JOIN "
-            f"{right_table} "
+            f"{table_to_join} "
             f"ON "
             f"{qualify_column(left_table, left_column)} "
             f"= "
             f"{qualify_column(right_table, right_column)}"
+        )
+
+        joined_tables.add(
+            table_to_join
         )
 
     return "\n".join(clauses)
@@ -496,13 +519,29 @@ def build_select_query(
     # PRIMARY TABLE
     # -------------------------------------------------
 
-    if not plan.table:
+    if not plan.table and not plan.tables:
 
         raise ValueError(
             "No primary table provided"
         )
 
     from_sql = plan.table
+
+    if plan.joins:
+
+        join_left_tables = [
+            join.get("left_table")
+            for join in plan.joins
+            if join.get("left_table")
+        ]
+
+        if join_left_tables:
+
+            from_sql = join_left_tables[0]
+
+        elif plan.tables:
+
+            from_sql = plan.tables[0]
 
     sql = f"""
 SELECT {distinct_sql}{columns_sql}
@@ -514,7 +553,8 @@ FROM {from_sql}
     # -------------------------------------------------
 
     join_clause = build_join_clause(
-        plan.joins
+        plan.joins,
+        base_table=from_sql
     )
 
     if join_clause:

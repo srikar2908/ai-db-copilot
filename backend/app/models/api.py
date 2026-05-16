@@ -13,6 +13,10 @@ class ApproveRequest(BaseModel):
 
     thread_id: str
 
+    approval_status: str = "approved"
+
+    approved_sql: str | None = None
+
 
 class RejectRequest(BaseModel):
 
