@@ -1,17 +1,21 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import PublicRoute from './components/auth/PublicRoute'
-import Connections from './pages/Connections'
-import Dashboard from './pages/Dashboard'
-import QueryHistory from './pages/QueryHistory'
-import Login from './pages/Login'
-import Register from './pages/Register'
+import LoadingSpinner from './components/ui/LoadingSpinner'
+
+const Connections = lazy(() => import('./pages/Connections'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const QueryHistory = lazy(() => import('./pages/QueryHistory'))
+const Login = lazy(() => import('./pages/Login'))
+const Register = lazy(() => import('./pages/Register'))
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <Suspense fallback={<LoadingSpinner label="Loading page..." />}>
+        <Routes>
         <Route
           element={
             <PublicRoute>
@@ -53,7 +57,8 @@ function App() {
           path="/history"
         />
         <Route element={<Navigate replace to="/login" />} path="*" />
-      </Routes>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

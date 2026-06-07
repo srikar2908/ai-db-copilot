@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from app.core.graph.state import (
     CopilotState
 )
@@ -73,6 +71,27 @@ from app.core.planner import (
 from app.core.sql.explainer import (
     explain_sql
 )
+from app.utils.time import utc_now
+
+
+async def persist_conversation_memory(state: CopilotState) -> None:
+    plan = state.query_plan
+
+    if not plan:
+        return
+
+    await save_conversation_memory(
+        thread_id=state.session_id,
+        tenant_id=state.tenant_id,
+        user_id=state.user_id,
+        active_table=plan.table,
+        selected_columns=plan.columns,
+        active_filters=plan.conditions,
+        order_by=plan.order_by,
+        row_limit=plan.limit,
+        last_generated_sql=state.generated_sql,
+        last_user_prompt=state.user_prompt,
+    )
 
 
 async def load_memory_node(
@@ -82,7 +101,9 @@ async def load_memory_node(
     thread_id = state.session_id
 
     memory = await get_conversation_memory(
-        thread_id
+        thread_id,
+        tenant_id=state.tenant_id,
+        user_id=state.user_id
     )
 
     # -------------------------------------------------
@@ -97,7 +118,7 @@ async def load_memory_node(
             "load_memory_node"
         )
 
-        state.updated_at = datetime.utcnow()
+        state.updated_at = utc_now()
 
         return state
 
@@ -145,7 +166,7 @@ async def load_memory_node(
         conversation_memory
     )
 
-    state.updated_at = datetime.utcnow()
+    state.updated_at = utc_now()
 
     state.node_trace.append(
         "load_memory_node"
@@ -181,7 +202,7 @@ async def extract_intent_node(
         extracted_intent
     )
 
-    state.updated_at = datetime.utcnow()
+    state.updated_at = utc_now()
 
     state.node_trace.append(
         "extract_intent_node"
@@ -265,7 +286,7 @@ async def clarification_node(
         state.clarification.resume_from_node = (
             "generate_query_plan_node"
         )
-        state.updated_at = datetime.utcnow()
+        state.updated_at = utc_now()
 
         state.node_trace.append(
             "clarification_required"
@@ -288,7 +309,7 @@ async def clarification_node(
 
     state.clarification.required = False
 
-    state.updated_at = datetime.utcnow()
+    state.updated_at = utc_now()
 
     state.node_trace.append(
         "clarification_completed"
@@ -410,12 +431,14 @@ async def generate_query_plan_node(
         state.errors = []
 
         state.updated_at = (
-            datetime.utcnow()
+            utc_now()
         )
 
         state.node_trace.append(
             "generate_query_plan_node"
         )
+
+        await persist_conversation_memory(state)
 
         await save_workflow_run(
             state.model_dump()
@@ -449,7 +472,7 @@ async def generate_query_plan_node(
         )
 
         state.updated_at = (
-            datetime.utcnow()
+            utc_now()
         )
 
         state.node_trace.append(
@@ -554,7 +577,7 @@ async def validate_sql_node(
         )
 
         state.updated_at = (
-            datetime.utcnow()
+            utc_now()
         )
 
         state.node_trace.append(
@@ -592,7 +615,7 @@ async def validate_sql_node(
         )
 
         state.updated_at = (
-            datetime.utcnow()
+            utc_now()
         )
 
         state.node_trace.append(
@@ -614,7 +637,7 @@ async def validate_sql_node(
     )
 
     state.updated_at = (
-        datetime.utcnow()
+        utc_now()
     )
 
     state.node_trace.append(
@@ -710,7 +733,7 @@ async def authorize_query_node(
         state.risk_level = "blocked"
 
         state.updated_at = (
-            datetime.utcnow()
+            utc_now()
         )
 
         state.node_trace.append(
@@ -728,7 +751,7 @@ async def authorize_query_node(
     # -------------------------------------------------
 
     state.updated_at = (
-        datetime.utcnow()
+        utc_now()
     )
 
     state.node_trace.append(
@@ -898,7 +921,7 @@ async def classify_risk_node(
             cost_analysis.estimated_cost
         )
 
-        if estimated_cost > 1000:
+        if estimated_cost is not None and estimated_cost > 1000:
 
             risk_level = "high"
 
@@ -909,7 +932,7 @@ async def classify_risk_node(
     state.risk_level = risk_level
 
     state.updated_at = (
-        datetime.utcnow()
+        utc_now()
     )
 
     state.node_trace.append(
@@ -953,7 +976,7 @@ async def request_sql_review_node(
     state.approval.approved = False
 
     state.updated_at = (
-        datetime.utcnow()
+        utc_now()
     )
 
     state.node_trace.append(
@@ -1053,7 +1076,7 @@ async def request_sql_review_node(
 #     # -------------------------------------------------
 
 #     state.updated_at = (
-#         datetime.utcnow()
+#         utc_now()
 #     )
 
 #     state.node_trace.append(
@@ -1143,7 +1166,7 @@ async def execute_query_node(
         )
 
     state.updated_at = (
-        datetime.utcnow()
+        utc_now()
     )
 
     if execution_result.success:

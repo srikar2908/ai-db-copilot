@@ -147,7 +147,9 @@ async def get_connection(
                 == connection_ref,
 
                 DatabaseConnection.tenant_id
-                == tenant_id
+                == tenant_id,
+                DatabaseConnection.owner_user_id
+                == user_id
             )
         )
 
@@ -194,7 +196,9 @@ async def list_connections(
             select(DatabaseConnection).where(
 
                 DatabaseConnection.tenant_id
-                == tenant_id
+                == tenant_id,
+                DatabaseConnection.owner_user_id
+                == owner_user_id
             )
         )
 

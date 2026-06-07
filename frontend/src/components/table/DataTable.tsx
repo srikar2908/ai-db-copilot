@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import type { ExecutionRow } from '../../types/query'
 import EmptyState from '../ui/EmptyState'
 
@@ -14,6 +15,11 @@ function formatCellValue(value: ExecutionRow[string]) {
 }
 
 function DataTable({ rows }: DataTableProps) {
+  const columns = useMemo(
+    () => Array.from(new Set(rows.flatMap((row) => Object.keys(row)))),
+    [rows],
+  )
+
   if (!rows.length) {
     return (
       <EmptyState
@@ -22,8 +28,6 @@ function DataTable({ rows }: DataTableProps) {
       />
     )
   }
-
-  const columns = Array.from(new Set(rows.flatMap((row) => Object.keys(row))))
 
   return (
     <div className="overflow-hidden rounded-md border border-slate-800">
@@ -59,4 +63,4 @@ function DataTable({ rows }: DataTableProps) {
   )
 }
 
-export default DataTable
+export default memo(DataTable)

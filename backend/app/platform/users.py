@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from anyio import to_thread
 
 from app.platform.database import (
     AsyncSessionLocal
@@ -81,9 +82,7 @@ async def register_user(
         # HASH PASSWORD
         # -----------------------------------------
 
-        hashed = hash_password(
-            password
-        )
+        hashed = await to_thread.run_sync(hash_password, password)
 
         # -----------------------------------------
         # CREATE USER
@@ -153,10 +152,9 @@ async def login_user(
         # VERIFY PASSWORD
         # -----------------------------------------
 
-        valid = verify_password(
-
+        valid = await to_thread.run_sync(
+            verify_password,
             password,
-
             user.hashed_password
         )
 

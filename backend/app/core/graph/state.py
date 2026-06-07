@@ -1,4 +1,5 @@
 from datetime import datetime
+from app.utils.time import utc_now
 from typing import Optional, Literal, Dict, Any
 
 from pydantic import BaseModel, Field
@@ -169,9 +170,9 @@ class CopilotState(BaseModel):
     # -------------------------------------------------
 
     created_at: datetime = Field(
-        default_factory=datetime.utcnow
+        default_factory=utc_now
     )
 
     updated_at: datetime = Field(
-        default_factory=datetime.utcnow
+        default_factory=utc_now
     )

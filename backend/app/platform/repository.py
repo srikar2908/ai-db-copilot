@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from sqlalchemy import select
 
 from app.platform.database import (
@@ -11,6 +9,7 @@ from app.platform.models import (
 )
 
 import json
+from app.utils.time import utc_now
 
 
 # -------------------------------------------------
@@ -66,12 +65,14 @@ async def save_workflow_run(
 
     async with AsyncSessionLocal() as session:
 
-        existing = await session.get(
-
-            WorkflowRun,
-
-            state["session_id"]
+        result = await session.execute(
+            select(WorkflowRun).where(
+                WorkflowRun.thread_id == state["session_id"],
+                WorkflowRun.tenant_id == state["tenant_id"],
+                WorkflowRun.user_id == str(state["user_id"]),
+            )
         )
+        existing = result.scalar_one_or_none()
 
         # -----------------------------------------
         # EXECUTION STATUS
@@ -201,7 +202,7 @@ async def save_workflow_run(
                 ),
 
             "updated_at":
-                datetime.utcnow()
+                utc_now()
         }
 
         # -----------------------------------------
@@ -246,7 +247,7 @@ async def save_workflow_run(
                     "user_prompt"
                 ],
 
-                created_at=datetime.utcnow(),
+                created_at=utc_now(),
 
                 **common_fields
             )
@@ -284,12 +285,25 @@ async def get_workflow_run(
 # GET ALL WORKFLOWS
 # -------------------------------------------------
 
-async def get_all_workflows():
+async def get_all_workflows(
+    tenant_id: str,
+    user_id: str | None = None
+):
 
     async with AsyncSessionLocal() as session:
 
         result = await session.execute(
             select(WorkflowRun)
+            .where(
+                WorkflowRun.tenant_id == tenant_id,
+                *(
+                    [WorkflowRun.user_id == str(user_id)]
+                    if user_id is not None
+                    else []
+                )
+            )
+            .order_by(WorkflowRun.created_at.desc())
+            .limit(50)
         )
 
         workflows = (
@@ -350,7 +364,9 @@ async def get_all_workflows():
 # -------------------------------------------------
 
 async def get_workflow_by_thread(
-    thread_id: str
+    thread_id: str,
+    tenant_id: str,
+    user_id: str | None = None
 ):
 
     async with AsyncSessionLocal() as session:
@@ -360,7 +376,13 @@ async def get_workflow_by_thread(
             select(WorkflowRun).where(
 
                 WorkflowRun.thread_id
-                == thread_id
+                == thread_id,
+                WorkflowRun.tenant_id == tenant_id,
+                *(
+                    [WorkflowRun.user_id == str(user_id)]
+                    if user_id is not None
+                    else []
+                )
             )
         )
 

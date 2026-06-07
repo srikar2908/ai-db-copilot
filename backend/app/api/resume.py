@@ -1,7 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
-from app.core.graph.builder import (
-    build_graph
+from app.core.graph.runtime import (
+    graph
 )
 
 from app.core.graph.state import (
@@ -15,19 +15,18 @@ from app.core.graph.status import (
 from app.core.clarification.resolver import (
     resolve_clarification
 )
+from app.security.dependencies import get_current_user
 
 
 router = APIRouter()
-
-graph = build_graph()
-
 
 @router.post("/workflow/resume")
 async def resume_workflow(
 
     session_id: str,
 
-    clarification_response: str
+    clarification_response: str,
+    current_user=Depends(get_current_user)
 ):
 
     # -------------------------------------------------
@@ -65,6 +64,12 @@ async def resume_workflow(
     workflow_state = CopilotState(
         **checkpoint_state.values
     )
+
+    if (
+        workflow_state.tenant_id != current_user["tenant_id"]
+        or workflow_state.user_id != str(current_user["user_id"])
+    ):
+        return {"error": "Workflow not found."}
 
     # -------------------------------------------------
     # VALIDATE STATUS

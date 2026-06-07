@@ -12,20 +12,14 @@ function Login() {
   const [email, setEmail] = useState('admin@test.com')
   const [password, setPassword] = useState('admin123')
   const [error, setError] = useState('')
-  const [successMessage, setSuccessMessage] = useState('')
+  const [successMessage, setSuccessMessage] = useState(
+    () => (location.state as { message?: string } | null)?.message || '',
+  )
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     document.title = 'Login | AI SQL Copilot'
   }, [])
-
-  useEffect(() => {
-    const state = location.state as { message?: string } | null
-
-    if (state?.message) {
-      setSuccessMessage(state.message)
-    }
-  }, [location.state])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()

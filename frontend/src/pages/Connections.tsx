@@ -13,12 +13,10 @@ import type { DatabaseConnection } from '../types/connection'
 import { getStoredUser } from '../utils/auth'
 import { getActiveConnectionRef, setActiveConnectionRef } from '../utils/connections'
 import { canUseAdminActions } from '../utils/roles'
+import { formatIstDate } from '../utils/date'
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value))
+  return formatIstDate(value)
 }
 
 function Connections() {
@@ -60,6 +58,7 @@ function Connections() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadConnections()
   }, [])
 

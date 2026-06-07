@@ -1,9 +1,6 @@
-from app.core.graph.builder import (
-    build_graph
+from app.core.graph.runtime import (
+    graph
 )
-
-
-graph = build_graph()
 
 
 async def resume_workflow(

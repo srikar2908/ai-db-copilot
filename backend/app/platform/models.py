@@ -4,13 +4,13 @@ from sqlalchemy import (
     Text,
     DateTime,
     Integer
+    , UniqueConstraint
 )
-
-from datetime import datetime
 
 from app.platform.database import (
     Base
 )
+from app.utils.time import utc_now
 
 
 # -------------------------------------------------
@@ -82,7 +82,7 @@ class WorkflowRun(Base):
     )
 
     approval_timestamp = Column(
-        DateTime
+        DateTime(timezone=True)
     )
 
     # -----------------------------------------
@@ -114,11 +114,11 @@ class WorkflowRun(Base):
     # -----------------------------------------
 
     created_at = Column(
-        DateTime
+        DateTime(timezone=True)
     )
 
     updated_at = Column(
-        DateTime
+        DateTime(timezone=True)
     )
 # -------------------------------------------------
 # DATABASE CONNECTIONS
@@ -163,8 +163,8 @@ class DatabaseConnection(Base):
     )
 
     created_at = Column(
-        DateTime,
-        default=datetime.utcnow
+        DateTime(timezone=True),
+        default=utc_now
     )
 
 
@@ -214,14 +214,22 @@ class PlatformUser(Base):
     )
 
     created_at = Column(
-        DateTime,
-        default=datetime.utcnow
+        DateTime(timezone=True),
+        default=utc_now
     )
 
 
 class ConversationMemory(Base):
 
     __tablename__ = "conversation_memory"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "user_id",
+            "thread_id",
+            name="uq_conversation_memory_scope",
+        ),
+    )
 
     id = Column(
         Integer,
@@ -231,7 +239,6 @@ class ConversationMemory(Base):
 
     thread_id = Column(
         String,
-        unique=True,
         nullable=False
     )
 
@@ -281,12 +288,29 @@ class ConversationMemory(Base):
     )
 
     created_at = Column(
-        DateTime,
-        default=datetime.utcnow
+        DateTime(timezone=True),
+        default=utc_now
     )
 
     updated_at = Column(
-        DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now
+    )
+
+
+class ConversationMessage(Base):
+
+    __tablename__ = "conversation_messages"
+
+    id = Column(String, primary_key=True)
+    thread_id = Column(String, nullable=False)
+    tenant_id = Column(String, nullable=False)
+    user_id = Column(String, nullable=False)
+    role = Column(String, nullable=False)
+    content = Column(JSON, nullable=False)
+    created_at = Column(
+        DateTime(timezone=True),
+        default=utc_now,
+        nullable=False,
     )

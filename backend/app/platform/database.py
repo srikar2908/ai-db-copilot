@@ -26,10 +26,15 @@ engine = create_async_engine(
     echo=False,
 
     pool_pre_ping=True,
+    pool_size=settings.DB_POOL_SIZE,
+    max_overflow=settings.DB_MAX_OVERFLOW,
+    pool_timeout=settings.DB_POOL_TIMEOUT_SECONDS,
 
     connect_args={
-
-        "statement_cache_size": 0
+        "statement_cache_size": 0,
+        "server_settings": {
+            "timezone": "UTC"
+        }
     }
 )
 

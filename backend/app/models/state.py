@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, Literal
 from datetime import datetime
+from app.utils.time import utc_now
 
 from app.core.graph.status import WorkflowStatus
 
@@ -364,9 +365,9 @@ class WorkflowState(BaseModel):
     # -------------------------------------------------
 
     created_at: datetime = Field(
-        default_factory=datetime.utcnow
+        default_factory=utc_now
     )
 
     updated_at: datetime = Field(
-        default_factory=datetime.utcnow
+        default_factory=utc_now
     )

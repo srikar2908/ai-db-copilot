@@ -39,6 +39,11 @@ async def add_connection(
 ):
 
     try:
+        if current_user["role"] != "admin":
+            raise HTTPException(
+                status_code=403,
+                detail="Admin role required to create database connections",
+            )
 
         # -------------------------------------------------
         # AUTHENTICATED TENANT
@@ -100,6 +105,9 @@ async def add_connection(
 
             detail=str(e)
         )
+
+    except HTTPException:
+        raise
 
     except Exception as e:
 

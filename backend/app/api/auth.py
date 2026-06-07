@@ -37,7 +37,7 @@ async def register_endpoint(
 
             full_name=request.full_name,
 
-            role=request.role
+            role="analyst"
         )
 
     except ValueError as e:

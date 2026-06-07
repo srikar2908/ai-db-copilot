@@ -9,23 +9,10 @@ import LoadingSpinner from '../components/ui/LoadingSpinner'
 import { getApiErrorMessage, historyApi } from '../services/api'
 import type { HistoryItem } from '../types/history'
 import { getStoredUser } from '../utils/auth'
+import { formatIstDate } from '../utils/date'
 
 function formatDate(value?: string | null) {
-  if (!value) {
-    return 'Unknown date'
-  }
-
-  const parsedDate = new Date(value)
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return 'Invalid date'
-  }
-
-  return new Intl.DateTimeFormat('en-IN', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-    timeZone: 'Asia/Kolkata',
-  }).format(parsedDate)
+  return formatIstDate(value)
 }
 
 function formatRelativeTime(value?: string | null) {
@@ -97,12 +84,8 @@ function QueryHistory() {
 
         const data = await historyApi.listHistory()
 
-        console.log('HISTORY DATA:', data)
-
         setHistory(Array.isArray(data) ? data : [])
       } catch (requestError) {
-        console.error(requestError)
-
         setError(
           getApiErrorMessage(
             requestError,
@@ -117,7 +100,7 @@ function QueryHistory() {
     void loadHistory()
   }, [])
 
-  const filteredHistory = history.filter((item) => {
+  const filteredHistory = useMemo(() => history.filter((item) => {
     const query = searchTerm.toLowerCase()
 
     const matchesSearch =
@@ -138,7 +121,7 @@ function QueryHistory() {
       displayStatus === statusFilter
 
     return matchesSearch && matchesStatus
-  })
+  }), [history, searchTerm, statusFilter])
 
   return (
     <AppLayout

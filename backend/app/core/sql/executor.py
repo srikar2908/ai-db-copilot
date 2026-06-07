@@ -9,6 +9,7 @@ from sqlalchemy import text
 from app.models.state import (
     ExecutionResult
 )
+from app.config import settings
 
 
 # -------------------------------------------------
@@ -61,7 +62,7 @@ async def execute_sql_query(
 
             if result.returns_rows:
 
-                rows = result.fetchall()
+                rows = result.fetchmany(settings.MAX_ROWS_RETURNED)
 
                 data = [
 

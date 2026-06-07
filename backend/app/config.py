@@ -16,6 +16,10 @@ class Settings(BaseSettings):
 
     MAX_QUERY_COST: int = 10000
     MAX_ROWS_RETURNED: int = 5000
+    SCHEMA_CACHE_TTL_SECONDS: int = 300
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 5
+    DB_POOL_TIMEOUT_SECONDS: int = 10
 
     LLM_TEMPERATURE: float = 0
 

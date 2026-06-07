@@ -16,7 +16,9 @@ from app.platform.models import (
 # -------------------------------------------------
 
 async def get_conversation_memory(
-    thread_id: str
+    thread_id: str,
+    tenant_id: str,
+    user_id: str
 ):
 
     async with AsyncSessionLocal() as session:
@@ -26,7 +28,11 @@ async def get_conversation_memory(
             select(ConversationMemory).where(
 
                 ConversationMemory.thread_id
-                == thread_id
+                == thread_id,
+                ConversationMemory.tenant_id
+                == tenant_id,
+                ConversationMemory.user_id
+                == str(user_id)
             )
         )
 
@@ -67,7 +73,11 @@ async def save_conversation_memory(
             select(ConversationMemory).where(
 
                 ConversationMemory.thread_id
-                == thread_id
+                == thread_id,
+                ConversationMemory.tenant_id
+                == tenant_id,
+                ConversationMemory.user_id
+                == str(user_id)
             )
         )
 
@@ -135,3 +145,5 @@ async def save_conversation_memory(
             session.add(memory)
 
         await session.commit()
+
+        return memory

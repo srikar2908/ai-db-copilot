@@ -498,7 +498,7 @@ OUTPUT FORMAT
 }}
 """
 
-    response = client.chat.completions.create(
+    response = await client.chat.completions.create(
 
         model=settings.GROQ_MODEL,
 

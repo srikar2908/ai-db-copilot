@@ -16,7 +16,7 @@ async def get_database_url(
 
         tenant_id=tenant_id,
 
-        user_id=user_id,
+        user_id=int(user_id),
 
         connection_ref=connection_ref
     )

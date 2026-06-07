@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from fastapi import (
     FastAPI,
     Depends
@@ -30,8 +28,8 @@ from app.api.history import (
     router as history_router
 )
 
-from app.core.graph.builder import (
-    build_graph
+from app.core.graph.runtime import (
+    graph
 )
 
 from app.core.schema.registry import (
@@ -53,6 +51,8 @@ from app.api.resume import (
 from app.api.routes.approval import (
     router as approval_router
 )
+from app.utils.time import utc_now
+from app.platform.messages import append_conversation_message
 
 
 app = FastAPI(
@@ -93,9 +93,6 @@ app.include_router(
     approval_router
 )
 
-graph = build_graph()
-
-
 # -------------------------------------------------
 # ROOT
 # -------------------------------------------------
@@ -107,6 +104,11 @@ async def root():
         "message":
             "AI Database Copilot Running"
     }
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
 
 # -------------------------------------------------
@@ -184,6 +186,14 @@ async def query_endpoint(
     user_role = current_user[
         "role"
     ]
+
+    await append_conversation_message(
+        thread_id=request.thread_id,
+        tenant_id=tenant_id,
+        user_id=user_id,
+        role="user",
+        content={"text": request.user_prompt},
+    )
 
     # -------------------------------------------------
     # RESOLVE DATABASE URL
@@ -274,10 +284,10 @@ async def query_endpoint(
             [],
 
         "created_at":
-            datetime.utcnow(),
+            utc_now(),
 
         "updated_at":
-            datetime.utcnow()
+            utc_now()
     }
 
     # -------------------------------------------------
@@ -296,103 +306,23 @@ async def query_endpoint(
         }
     )
 
+    await append_conversation_message(
+        thread_id=request.thread_id,
+        tenant_id=tenant_id,
+        user_id=user_id,
+        role="assistant",
+        content={
+            "generated_sql": result.get("generated_sql"),
+            "workflow_status": str(result.get("workflow_status")),
+            "errors": result.get("errors", []),
+        },
+    )
+
     return result
 
 
 # -------------------------------------------------
 # APPROVE + RESUME
-# -------------------------------------------------
-
-@app.post("/approve")
-async def approve_endpoint(
-
-    request: ApprovalRequest,
-
-    current_user=Depends(
-        get_current_user
-    )
-):
-
-    from app.platform.history import (
-        get_workflow_run
-    )
-
-    from app.core.sql.executor import (
-        execute_sql_query
-    )
-
-    # -------------------------------------------------
-    # LOAD SAVED WORKFLOW
-    # -------------------------------------------------
-
-    workflow = await get_workflow_run(
-        request.thread_id
-    )
-
-    if not workflow:
-
-        return {
-            "error":
-                "Workflow not found"
-        }
-
-    # -------------------------------------------------
-    # REJECT FLOW
-    # -------------------------------------------------
-
-    if request.approval_status != "approved":
-
-        return {
-            "message":
-                "Query rejected"
-        }
-
-    # -------------------------------------------------
-    # RESOLVE DATABASE URL
-    # -------------------------------------------------
-
-    database_url = await get_database_url(
-
-        tenant_id=current_user[
-            "tenant_id"
-        ],
-
-        user_id=current_user[
-            "user_id"
-        ],
-
-        connection_ref=workflow.connection_ref
-    )
-
-    # -------------------------------------------------
-    # EXECUTE SQL
-    # -------------------------------------------------
-
-    execution_result = await execute_sql_query(
-
-        database_url=database_url,
-
-        sql=workflow.generated_sql
-    )
-
-    return {
-
-        "thread_id":
-            workflow.thread_id,
-
-        "approval_status":
-            "approved",
-
-        "generated_sql":
-            workflow.generated_sql,
-
-        "execution_result":
-            execution_result
-    }
-
-
-# -------------------------------------------------
-# POLICY TEST ENDPOINT
 # -------------------------------------------------
 
 @app.post("/test-policy")

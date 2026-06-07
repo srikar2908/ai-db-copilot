@@ -1,6 +1,4 @@
-from datetime import datetime
-
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.models.api import (
 
@@ -11,8 +9,8 @@ from app.models.api import (
     EditAndApproveRequest
 )
 
-from app.core.graph.builder import (
-    build_graph
+from app.core.graph.runtime import (
+    graph
 )
 
 from app.core.graph.state import (
@@ -37,11 +35,9 @@ from app.core.sql.validator import (
 from app.security.dependencies import (
     get_current_user
 )
+from app.utils.time import utc_now
 
 router = APIRouter()
-
-graph = build_graph()
-
 
 # -------------------------------------------------
 # LOAD WORKFLOW STATE
@@ -52,7 +48,9 @@ graph = build_graph()
 # -------------------------------------------------
 
 async def load_workflow_state(
-    thread_id: str
+    thread_id: str,
+    tenant_id: str,
+    user_id: str
 ):
 
     config = {
@@ -100,6 +98,12 @@ async def load_workflow_state(
         **state_values
     )
 
+    if (
+        workflow_state.tenant_id != tenant_id
+        or workflow_state.user_id != str(user_id)
+    ):
+        return None, config
+
     return workflow_state, config
 
 
@@ -116,10 +120,15 @@ async def approve_sql(
         get_current_user
     )
 ):
+    if current_user["role"] not in {"admin", "developer"}:
+        raise HTTPException(status_code=403, detail="Approval role required")
 
     workflow_state, config = (
         await load_workflow_state(
             request.thread_id
+            ,
+            current_user["tenant_id"],
+            current_user["user_id"]
         )
     )
 
@@ -164,7 +173,7 @@ async def approve_sql(
         )
 
         workflow_state.updated_at = (
-            datetime.utcnow()
+            utc_now()
         )
 
         workflow_state.node_trace.append(
@@ -209,7 +218,7 @@ async def approve_sql(
     )
 
     workflow_state.approval_timestamp = (
-        datetime.utcnow()
+        utc_now()
     )
 
     workflow_state.is_resumed = True
@@ -253,10 +262,15 @@ async def edit_and_approve(
         get_current_user
     )
 ):
+    if current_user["role"] not in {"admin", "developer"}:
+        raise HTTPException(status_code=403, detail="Approval role required")
 
     workflow_state, config = (
         await load_workflow_state(
             request.thread_id
+            ,
+            current_user["tenant_id"],
+            current_user["user_id"]
         )
     )
 
@@ -411,11 +425,11 @@ async def edit_and_approve(
     )
 
     workflow_state.approval_timestamp = (
-        datetime.utcnow()
+        utc_now()
     )
 
     workflow_state.updated_at = (
-        datetime.utcnow()
+        utc_now()
     )
 
     workflow_state.is_resumed = True
@@ -455,12 +469,16 @@ async def edit_and_approve(
 @router.post("/reject")
 async def reject_sql(
 
-    request: RejectRequest
+    request: RejectRequest,
+    current_user=Depends(get_current_user)
 ):
 
     workflow_state, config = (
         await load_workflow_state(
             request.thread_id
+            ,
+            current_user["tenant_id"],
+            current_user["user_id"]
         )
     )
 
@@ -486,7 +504,7 @@ async def reject_sql(
     )
 
     workflow_state.updated_at = (
-        datetime.utcnow()
+        utc_now()
     )
 
     workflow_state.node_trace.append(
