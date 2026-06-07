@@ -1,20 +1,11 @@
 import asyncio
 
-from app.platform.database import (
-    engine,
-    Base
-)
-
-from app.platform import models
+from app.platform.schema import ensure_platform_schema
 
 
 async def init():
 
-    async with engine.begin() as conn:
-
-        await conn.run_sync(
-            Base.metadata.create_all
-        )
+    await ensure_platform_schema()
 
     print(
         "Platform DB initialized"

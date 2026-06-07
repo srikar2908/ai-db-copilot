@@ -21,7 +21,7 @@ export type RegisterRequest = {
   email: string
   password: string
   full_name: string
-  role: 'analyst' | 'developer' | 'admin'
+  role?: 'analyst'
 }
 
 export type RegisterResponse = {

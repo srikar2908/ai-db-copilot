@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import (
     FastAPI,
     Depends
@@ -11,10 +13,7 @@ from app.db.registry import (
     get_database_url
 )
 
-from app.api.models import (
-    QueryRequest,
-    ApprovalRequest
-)
+from app.api.models import QueryRequest
 
 from app.api.connections import (
     router as connection_router
@@ -53,10 +52,18 @@ from app.api.routes.approval import (
 )
 from app.utils.time import utc_now
 from app.platform.messages import append_conversation_message
+from app.platform.schema import ensure_platform_schema
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    await ensure_platform_schema()
+    yield
 
 
 app = FastAPI(
-    title=settings.APP_NAME
+    title=settings.APP_NAME,
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -106,9 +113,19 @@ async def root():
     }
 
 
+@app.head("/")
+async def root_head():
+    return None
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.head("/health")
+async def health_head():
+    return None
 
 
 # -------------------------------------------------

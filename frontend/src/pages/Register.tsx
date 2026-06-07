@@ -4,9 +4,6 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import Button from '../components/ui/Button'
 import { authApi, getApiErrorMessage } from '../services/api'
-import type { RegisterRequest } from '../types/auth'
-
-const roles: RegisterRequest['role'][] = ['analyst', 'developer', 'admin']
 
 function Register() {
   const navigate = useNavigate()
@@ -14,7 +11,6 @@ function Register() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [tenantId, setTenantId] = useState('tenant_001')
-  const [role, setRole] = useState<RegisterRequest['role']>('analyst')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
@@ -39,7 +35,7 @@ function Register() {
         email,
         password,
         full_name: fullName,
-        role,
+        role: 'analyst',
       })
 
       navigate('/login', {
@@ -65,7 +61,7 @@ function Register() {
               Create AI SQL Copilot account
             </h1>
             <p className="mt-2 text-sm leading-6 text-slate-400">
-              Register a tenant user to test analyst, developer, and admin workflows.
+              Register an analyst account for your tenant workspace.
             </p>
           </div>
 
@@ -126,40 +122,19 @@ function Register() {
               />
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-300" htmlFor="tenant_id">
-                  Tenant ID
-                </label>
-                <input
-                  className="block w-full rounded-md border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-                  disabled={isLoading}
-                  id="tenant_id"
-                  onChange={(event) => setTenantId(event.target.value)}
-                  placeholder="tenant_001"
-                  required
-                  value={tenantId}
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-300" htmlFor="role">
-                  Role
-                </label>
-                <select
-                  className="block w-full rounded-md border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-                  disabled={isLoading}
-                  id="role"
-                  onChange={(event) => setRole(event.target.value as RegisterRequest['role'])}
-                  value={role}
-                >
-                  {roles.map((roleOption) => (
-                    <option key={roleOption} value={roleOption}>
-                      {roleOption}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-300" htmlFor="tenant_id">
+                Tenant ID
+              </label>
+              <input
+                className="block w-full rounded-md border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+                disabled={isLoading}
+                id="tenant_id"
+                onChange={(event) => setTenantId(event.target.value)}
+                placeholder="tenant_001"
+                required
+                value={tenantId}
+              />
             </div>
 
             <Button className="w-full py-3" isLoading={isLoading} type="submit">
